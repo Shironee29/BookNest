@@ -16,7 +16,7 @@ struct Software_EngineeringApp: App {
         WindowGroup {
             // Memulai aplikasi dari TabBarView dan meneruskan BookViewModel
             // agar bisa diakses oleh HomePageView dan AddBookView.
-            LandingPageView()
+            TabBarView()
                 .environmentObject(bookViewModel)
         }
     }

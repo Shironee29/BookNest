@@ -1,14 +1,12 @@
 import SwiftUI
 
 struct FavoriteView: View {
-    // 1. Menerima BookViewModel dari environment
-    // Ini adalah sumber data utama yang dibagikan ke seluruh aplikasi.
+    // Menerima BookViewModel dari environment
     @EnvironmentObject var bookViewModel: BookViewModel
     
-    // State untuk menampung teks pencarian
     @State private var searchText = ""
 
-    // Properti komputasi untuk memfilter buku favorit berdasarkan teks pencarian
+    // Properti komputasi untuk memfilter buku favorit
     private var filteredFavoriteBooks: [Book] {
         let favoriteBooks = bookViewModel.allBooks.filter { $0.isFavorite }
         
@@ -22,14 +20,7 @@ struct FavoriteView: View {
         }
     }
     
-    // Definisi kolom untuk grid
-    let columns = [
-        GridItem(.flexible(), spacing: 16),
-        GridItem(.flexible(), spacing: 16)
-    ]
-    
     var body: some View {
-        // Gunakan NavigationStack untuk judul dan navigasi di masa depan
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 
@@ -37,67 +28,41 @@ struct FavoriteView: View {
                 HStack {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.gray)
-                        .padding(.leading, 12)
                     
                     TextField("Search your favorite books...", text: $searchText)
-                        .padding(.vertical, 10)
                 }
+                .padding(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
                 .background(Color(UIColor.systemGray6))
                 .cornerRadius(10)
                 .padding(.horizontal)
                 
-                // Grid of Favorite Books
+                // --- PERUBAHAN UTAMA DI SINI ---
+                // Mengganti LazyVGrid menjadi ScrollView dengan LazyVStack
                 ScrollView {
-                    // 2. Gunakan 'filteredFavoriteBooks' yang sudah difilter
-                    LazyVGrid(columns: columns, spacing: 24) {
+                    LazyVStack(spacing: 15) { // Atur jarak antar item
                         ForEach(filteredFavoriteBooks) { book in
-                            // 3. Bungkus setiap item dengan NavigationLink agar bisa diklik
                             NavigationLink(destination: BookDetailView(book: book)) {
-                                VStack(spacing: 8) {
-                                    // Logika untuk menampilkan gambar (coverData atau coverAssetName)
-                                    if let imageData = book.coverData, let uiImage = UIImage(data: imageData) {
-                                        Image(uiImage: uiImage)
-                                            .resizable().scaledToFill()
-                                    } else {
-                                        Image(book.coverAssetName)
-                                            .resizable().scaledToFill()
-                                    }
-                                }
-                                .frame(width: 120, height: 180)
-                                .background(Color.gray.opacity(0.3))
-                                .clipped()
-                                .cornerRadius(10)
-                                
-                                Text(book.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(.primary) // Pastikan teks bisa dibaca
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                                
-                                Text(book.author)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                // Menggunakan view baru untuk tampilan list
+                                BookListItem(book: book)
                             }
-                            .frame(width: 140)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
+                    .padding(.top, 10) // Beri jarak dari search bar
                 }
-                
-                // Overlay jika tidak ada buku favorit
-                if filteredFavoriteBooks.isEmpty {
-                    VStack {
-                        Spacer()
-                        Image(systemName: "heart.slash.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray)
-                        Text(searchText.isEmpty ? "No Favorite Books Yet" : "No Results Found")
-                            .font(.headline)
-                            .foregroundColor(.gray)
-                        Spacer()
+                .overlay {
+                    // Tampilkan pesan jika tidak ada buku favorit
+                    if filteredFavoriteBooks.isEmpty {
+                        VStack {
+                            Image(systemName: "heart.slash.fill")
+                                .font(.largeTitle)
+                                .foregroundColor(.gray)
+                            Text(searchText.isEmpty ? "No Favorite Books Yet" : "No Results Found")
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                                .padding(.top, 8)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
                 }
             }
             .navigationTitle("My Favorite Book")
@@ -105,8 +70,57 @@ struct FavoriteView: View {
     }
 }
 
+// Struct baru untuk tampilan item dalam format daftar vertikal
+struct BookListItem: View {
+    @ObservedObject var book: Book
+    
+    var body: some View {
+        HStack(spacing: 15) {
+            // Tampilan Gambar
+            ZStack {
+                if let imageData = book.coverData, let uiImage = UIImage(data: imageData) {
+                    Image(uiImage: uiImage)
+                        .resizable().scaledToFill()
+                } else if !book.coverAssetName.isEmpty {
+                    Image(book.coverAssetName)
+                        .resizable().scaledToFill()
+                } else {
+                    Rectangle().fill(Color.gray.opacity(0.3))
+                }
+            }
+            .frame(width: 80, height: 120) // Ukuran sampul disesuaikan untuk list
+            .clipped()
+            .cornerRadius(8)
+            
+            // Tampilan Teks
+            VStack(alignment: .leading, spacing: 4) {
+                Text(book.title)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                
+                Text(book.author)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Text(book.genre)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+                    .padding(.top, 5)
+            }
+            
+            Spacer() // Mendorong konten ke kiri
+        }
+        .padding(10)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
+
+
 #Preview {
     FavoriteView()
-        // Sediakan BookViewModel untuk preview agar tidak crash
         .environmentObject(BookViewModel())
 }
